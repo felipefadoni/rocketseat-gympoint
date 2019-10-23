@@ -1,5 +1,7 @@
 import { format, addMonths, parseISO } from 'date-fns';
 import { Op } from 'sequelize';
+import Util from '../../helpers/Util';
+import Mail from '../../lib/Mail';
 import Matriculas from '../models/Matriculas';
 import Estudantes from '../models/Estudantes';
 import Planos from '../models/Planos';
@@ -115,7 +117,7 @@ class MatriculasController {
     }
 
     const data_termino = format(
-      new Date(addMonths(new Date(dataAtual), plano.duracao)),
+      new Date(addMonths(new Date(data), plano.duracao)),
       'yyyy-MM-dd HH:mm:ss'
     );
 
@@ -129,6 +131,21 @@ class MatriculasController {
       data_inicio,
       data_termino,
       valor,
+    });
+
+    const valorReal = Util.toReal(valor);
+
+    await Mail.sendMail({
+      to: `${estudante.nome} <${estudante.email}>`,
+      subject: 'Matrícula na GymPoint',
+      template: 'matricula',
+      context: {
+        nomeEstudante: estudante.nome,
+        dataInicial: format(parseISO(data_inicio), 'dd/MM/yyyy'),
+        dataFinal: format(parseISO(data_termino), 'dd/MM/yyyy'),
+        valorTotal: valorReal,
+        meses: plano.duracao,
+      },
     });
 
     return res.json(matriculaCreated);
